@@ -1,0 +1,18 @@
+type Comment{
+    commentedBy:String!
+    text:String!
+}
+
+type Post{
+    id:ID!
+    postedBy:String!
+    description:String!
+    comments:[Comment]
+}
+
+type User{
+    id:ID!
+    userName:ID!
+    email:String!
+    posts:[Post]
+}

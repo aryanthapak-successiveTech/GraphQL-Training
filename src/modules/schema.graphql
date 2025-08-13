@@ -1,0 +1,19 @@
+type Query{
+    messages:[Message!]!
+    getUsers:[User!]!
+    getUser(email:String!,userName:String!):User!
+    getPosts:[Post!]!
+    getPostsByUser(email:String!,postId:ID!):[Post!]!
+    getPostComments(postId:ID!):[Comment!]!
+}
+
+type Mutation{
+    postMessage(content:String!, author:String!):Message!
+    addUser(email:String!,userName:String!):User!
+    editUser(id:ID!,email:String!,userName:String!):User!
+    addPost(email:String!,description:String!):Post!
+    editPost(postId:ID!,description:String!):Post!
+    addComment(postId:ID!,email:String!,text:String!):Comment!
+}
+
+
