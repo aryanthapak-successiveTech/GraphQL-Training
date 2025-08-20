@@ -4,7 +4,7 @@ export const userMutationsResolvers={
         const user={
             id:`${users.length}`,
             email,
-            userName
+            userName,
         }
 
         users.push(user);
@@ -23,7 +23,8 @@ export const postMutationResolvers={
         const addedPost={
             id:`${posts.length+1}`,
             postedBy:email,
-            description
+            description,
+            createdAt:new Date().toISOString()
         };
 
         posts.push(addedPost);
