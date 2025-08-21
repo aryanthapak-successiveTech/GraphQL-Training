@@ -1,11 +1,12 @@
 import { messages } from "./dataSource.js";
 
 export const messageMutationResolvers = {
-  postMessage: (_, { content, author }) => {
+  sendMessage: (_, { content, author,recipient }) => {
     const newMessage = {
       id: String(messages.length + 1),
       content,
       author,
+      recipient,
       createdAt: new Date().toISOString(),
     };
     messages.push(newMessage);

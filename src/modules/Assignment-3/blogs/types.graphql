@@ -23,14 +23,24 @@ type PaginatedPosts{
 
 type User{
     id:ID!
-    userName:ID!
+    userName:String!
     email:String!
-    posts:[Post]
+    posts:[Post!]
+    isOnline:Boolean
+}
+
+type JWTPayload{
+    token:String!
 }
 
 type UserError{
     code:Int
     message:String!
+}
+
+type Conversation{
+    id:ID!
+    messages:[Message!]
 }
 
 union UserResult=User|UserError

@@ -6,15 +6,29 @@ type Query{
     getPostsByUser(email:String!,postId:ID!):[Post!]!
     getPostComments(postId:ID!):[Comment!]!
     getPaginatedPosts(limit:Int!,page:Int!):PaginatedPosts!
+    getMessageHistory(userId:ID!):[Message!]!
 }
 
 type Mutation{
-    postMessage(content:String!, author:String!):Message!
-    addUser(email:String!,userName:String!):UserResult!
+    # postMessage(content:String!, author:String!):Message!
+    createUser(email:String!,userName:String!,candidatePassword:String!):UserResult!
     editUser(id:ID!,email:String!,userName:String!):UserResult!
     addPost(email:String!,description:String!):Post!
     editPost(postId:ID!,description:String!):Post!
     addComment(postId:ID!,email:String!,text:String!):Comment!
+    login(email:String!,password:String!):JWTPayload!
+    sendMessage(content: String!, author: String!, recipient: String!): Message!
+    setUserOnline(email:String!,isOnline:Boolean):UserResult!
+}
+
+type UserPresence{
+    userId:ID!
+    isOnline:Boolean
+}
+
+type Subscription{
+    commentAdded(postId:ID!):Comment
+    userPresenceChanged:UserPresence!
 }
 
 
