@@ -26,7 +26,8 @@ type User{
     userName:String!
     email:String!
     posts:[Post!]
-    isOnline:Boolean
+    isOnline:Boolean!
+    role:String!
 }
 
 type JWTPayload{
@@ -44,4 +45,3 @@ type Conversation{
 }
 
 union UserResult=User|UserError
-

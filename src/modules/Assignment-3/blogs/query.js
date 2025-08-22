@@ -1,15 +1,29 @@
-import { messages } from "../message/dataSource.js";
-import { posts, users } from "./dataSource.js";
-
+import User from "../../../models/UserModel.js";
+import Post from "../../../models/PostModel.js";
+import Conversation from "../../../models/ConversationModel.js";
 export const userQueryResolvers = {
-  getUsers: () => users,
+  getUsers: async (_,__,{user}) => {
+    if(user.role!="ADMIN"){
+      throw new Error("Unauthorized")
+    }
+    const users=await User.find();
+    return users.map((user)=>({
+      __typename:"User",
+      id:user._id,
+      email:user.email,
+      userName:user.userName,
+      isOnline:user.isOnline,
+      posts:user.posts,
+    }))
+  },
   getUser: async (_, { userName }) => {
-    const userRetrival = new Promise((resolve, reject) => {
+    const findUser =()=> new Promise(async(resolve, reject) => {
+      const user=await User.findOne({userName})
       setTimeout(() => {
-        resolve(users.find((user) => user.userName === userName));
+       resolve(user);
       }, 2000);
     });
-    const user = await userRetrival;
+    const user = await findUser();
     if (!user) {
       return {
         __typename: "UserError",
@@ -17,43 +31,63 @@ export const userQueryResolvers = {
         code: 404,
       };
     }
-    return user;
+    return {
+      __typename:"User",
+      id:user._id,
+      email:user.email,
+      userName:user.userName,
+      isOnline:user.isOnline,
+      posts:user.posts,
+    };
   },
-  getMessageHistory: (_, { userId }) => {
-    const userMessageHistory = messages.filter(
-      (message) => message.author === userId || message.recipient === userId
-    );
-    return userMessageHistory;
+  getMessageHistory:async (_, { userId },{user}) => {
+    if(!user){
+      throw new Error("Unauthenticated")
+    }
+    const currentUser=await currentUser.findOne({_id:userId}).populate("conversations");
+    const populatedConversations= await Conversation.populate(currentUser.conversations, {
+    path: "messages",
+  });
+    return populatedConversations[0].messages;
   },
 };
 
 export const postQueryResolvers = {
-  getPosts: () => posts,
-  getPostsByUser: async (_, { email }) => {
-    const userPostsRetrival = new Promise((resolve, reject) => {
+  getPosts: async() => await Post.find(),
+  getPostsByUser: async (_, { userId }) => {
+    const userPostsRetrival =()=> new Promise(async (resolve, reject) => {
+      const userPosts=await Post.find({postedBy:userId});
       setTimeout(() => {
-        resolve(posts.filter((post) => post.postedBy === email));
+        resolve(userPosts);
       }, 2000);
     });
-    const userPosts = await userPostsRetrival;
+    const userPosts = await userPostsRetrival();
     return userPosts;
   },
 
-  getPostComments: (_, { postId }) => {
-    const postComments = posts
-      .filter((post) => post.id === postId)
-      .map((userPost) => userPost.comments);
-    return postComments;
+  getPostComments: async (_, { postId }) => {
+    const post = await Post.findOne({_id:postId}).populate("comments");
+    return post.comments;
   },
 
-  getPaginatedPosts: (_, { limit, page }) => {
-    const totalCount = posts.length;
-    const totalPages = Math.ceil(posts.length / limit);
+  getPaginatedPosts: async (_, { limit, page }) => {
+    const totalCount = await Post.countDocuments();
+    const totalPages = Math.ceil(totalCount / limit);
     const startIdx = (page - 1) * limit;
-    const sortedPosts = [...posts].sort((postA, postB) =>
-      postA.createdAt.localeCompare(postB.createdAt)
-    );
-    const items = sortedPosts.slice(startIdx, startIdx + limit);
+    const items = await Post.aggregate([
+      {
+        $skip:startIdx
+      },
+      {
+        $limit:limit
+      },
+      {
+        $sort:{
+          createdAt:1
+        }
+      }
+    ])
+
     return {
       data: items,
       totalCount,
