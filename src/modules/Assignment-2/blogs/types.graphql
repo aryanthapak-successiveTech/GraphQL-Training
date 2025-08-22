@@ -1,0 +1,37 @@
+type Comment{
+    id:ID!
+    commentedBy:String!
+    text:String!
+}
+
+type Post{
+    id:ID!
+    postedBy:String!
+    description:String!
+    comments:[Comment]
+    createdAt:String!
+}
+
+type PaginatedPosts{
+    data:[Post!]!
+    totalCount:Int!
+    hasNext:Boolean!
+    hasPrev:Boolean!
+    currentPage:Int!
+    totalPages:Int!
+}
+
+type User{
+    id:ID!
+    userName:ID!
+    email:String!
+    posts:[Post]
+}
+
+type UserError{
+    code:Int
+    message:String!
+}
+
+union UserResult=User|UserError
+
