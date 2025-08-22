@@ -1,21 +1,25 @@
+import bcrypt from "bcryptjs"
 export const users = [
   {
     id: "1",
     email: "aryanthapak8@gmail.com",
     userName: "Aryanth",
-    posts:["1"]
+    posts:["1"],
+    password:await bcrypt.hash("Aryan111",12)
   },
   {
     id: "2",
     email: "amanmehra@gmail.com",
     userName: "Amanmeh",
-    posts:["2"]
+    posts:["2"],
+    password:await bcrypt.hash("Aman111",12)
   },
   {
     id: "3",
     email: "adarshtrivedi8@gmail.com",
     userName: "Adarsht",
-    posts:["3"]
+    posts:["3"],
+    password:await bcrypt.hash("Adarsh111",12)
   },
 ];
 
