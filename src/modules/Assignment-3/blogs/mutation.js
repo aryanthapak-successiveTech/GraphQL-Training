@@ -1,51 +1,62 @@
 import { pubsub } from "../../../server/pubsub.js";
-import { messages } from "../message/dataSource.js";
-import { posts, users } from "./dataSource.js";
+import User from "../../../models/UserModel.js";
+import Post from "../../../models/PostModel.js";
+import Comment from "../../../models/CommentModel.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+
 export const userMutationsResolvers = {
-  createUser: async (_, { userName, email, candidatePassword }) => {
-    const hashedPassword = await bcrypt.hash(candidatePassword, 12);
-    const user = {
-      id: `${users.length + 1}`,
-      email,
+  createUser: async (_, { userName, email, password, role }) => {
+    const newUser = await User.create({
       userName,
-      password: hashedPassword,
-    };
-    users.push(user);
-    const { password, ...userData } = user;
+      email,
+      password,
+      role,
+    });
     return {
       __typename: "User",
-      ...userData,
+      id: newUser._id,
+      email: newUser.email,
+      userName: newUser.userName,
+      role: newUser.role,
+      isOnline: newUser.isOnline,
     };
   },
 
   setUserOnline: (_, { email, isOnline }) => {
-    const user = users.find((user) => user.email === email);
-    user.isOnline = isOnline;
+    const user = User.findOneAndUpdate(
+      { email },
+      { isOnline },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
     if (!user) {
       throw new Error(`User with email ${email} not found`);
     }
+
     pubsub.publish(`USER_STATUS_CHANGED`, {
       userPresenceChanged: {
-        userId: user.id,
+        userId: user._id,
         isOnline,
       },
     });
+
     return {
       __typename: "User",
       ...user,
     };
   },
 
-  editUser: (_, { id, userName, email }) => {
-    const user = users.find((user) => user.id === id);
-    const updatedUser = { ...user, userName, email };
+  editUser: async (_, { id, userName, email, role }) => {
+    const updatedUser = await User.find({ email }, { userName, email, role });
     return updatedUser;
   },
 
   login: async (_, { email, password }) => {
-    const user = users.find((user) => user.email === email);
+    const user = await User.findOne({ email });
     if (!user) {
       throw new Error("User Not Found");
     }
@@ -55,7 +66,7 @@ export const userMutationsResolvers = {
       throw new Error("Unauthorized");
     }
 
-    const token = jwt.sign({ email }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ email, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRES,
     });
 
@@ -67,44 +78,59 @@ export const userMutationsResolvers = {
 };
 
 export const postMutationResolvers = {
-  addPost: (_, { email, description }) => {
-    const addedPost = {
-      id: `${posts.length + 1}`,
-      postedBy: email,
-      description,
-      createdAt: new Date().toISOString(),
+  addPost: async (_, { userId, description }) => {
+    const addedPost = await Post.create(
+      {
+        postedBy: userId,
+        description,
+      },
+    );
+
+    await User.findOneAndUpdate(
+      { _id: userId },
+      {
+        $push: {
+          posts: addedPost._id,
+        },
+      }
+    );
+
+    return {
+      id:addedPost._id,
+      postedBy:addedPost.postedBy,
+      description:addedPost.description,
+      createdAt:addedPost.createdAt
     };
-
-    posts.push(addedPost);
-
-    return addedPost;
   },
 
-  editPost: (_, { postId, description }) => {
-    const post = posts.find((post) => post.id === postId);
-    const updatedPost = { ...post, description };
+  editPost: async (_, { postId, description }) => {
+    const updatedPost = await User.findOneAndUpdate(
+      { postId },
+      { description },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
     return updatedPost;
   },
 
-  addComment: (_, { postId, email, text }) => {
-    const post = posts.find((post) => post.id === postId);
-    const comment = {
-      id: `${postId}_${post.comments.length + 1}`,
-      commentedBy: email,
-      text,
-    };
-    if (!post.comments) {
-      post.comments = [comment];
+  addComment: async (_, { postId, userId, text }) => {
+      const newComment = await Comment.create(
+        { commentedBy: userId, text },
+      );
+      await Post.findOneAndUpdate(
+        { _id: postId },
+        {
+          $push: {
+            comments: newComment._id,
+          },
+        },
+      );
       pubsub.publish(`COMMENT_ADDED_${postId}`, {
-        commentAdded: comment,
+        commentAdded: newComment,
       });
-      return comment;
-    }
-    post.comments.push(comment);
 
-    pubsub.publish(`COMMENT_ADDED_${postId}`, {
-      commentAdded: comment,
-    });
-    return comment;
+      return newComment;
   },
 };

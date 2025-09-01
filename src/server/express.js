@@ -15,7 +15,8 @@ import { pubsub } from "./pubsub.js"; // Import the pubsub instance
 import { typeDefs } from "../schema/typeDefs.js";
 import { resolvers } from "../schema/resolvers.js";
 import { config } from "dotenv";
-
+import { connectDB } from "../config/dbConfig.js";
+import jwt from "jsonwebtoken";
 
 
 export async function createExpressServer() {
@@ -25,6 +26,7 @@ export async function createExpressServer() {
   config();
   // Build executable schema
   const schema = makeExecutableSchema({ typeDefs, resolvers });
+  await connectDB();
 
   // Apollo Server setup
   const server = new ApolloServer({
@@ -42,7 +44,16 @@ export async function createExpressServer() {
     cors(),
     express.json(),
     expressMiddleware(server, {
-      context: async () => ({ pubsub }),
+      context: async ({req}) => {
+        if(!req.headers.authorization)
+        {
+          return {pubsub}
+        }
+
+        const token=req.headers.authorization.split(" ")[1];
+        const user=jwt.verify(token,process.env.JWT_SECRET);
+        return { pubsub,user }
+      },
     })
   );
 

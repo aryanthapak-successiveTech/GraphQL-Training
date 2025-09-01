@@ -1,6 +1,7 @@
 import { blogModules } from "../modules/Assignment-3/blogs/index.js";
 import { messageModules } from "../modules/Assignment-3/message/index.js";
-import { comments, posts } from "../modules/Assignment-3/blogs/dataSource.js";
+import User from "../models/UserModel.js";
+import Post from "../models/PostModel.js";
 
 export const resolvers = {
   Query: {
@@ -11,21 +12,36 @@ export const resolvers = {
     ...messageModules.Mutations,
     ...blogModules.Mutations,
   },
+
   User: {
-    posts: (parent, args, context) => {
-      const userId = parent.email;
-      const userPosts = posts.filter((post) => post.postedBy === userId);
-      return userPosts;
+    posts: async (parent, args, context) => {
+      const user = await User.findOne({ email: parent.email }).populate(
+        "posts"
+      );
+      return user.posts;
     },
   },
+
   Post: {
-    comments: (parent, args, context) => {
-      const commentIds = new Set(parent.comments);
-      const postComments = comments.filter((comment) =>
-        commentIds.has(comment.id)
-      );
-      return postComments;
+    comments: async (parent, args, context) => {
+      const post = await Post.findOne({ _id: parent.id }).populate("comments");
+      console.log(post);
+      return post.comments;
     },
+  },
+
+  PaginatedPosts: {
+    data: async (parent) => {
+      const posts = parent.data.map((post) => ({
+        id: post._id,
+        postedBy: post.postedBy,
+        description: post.description,
+        createdAt: post.createdAt,
+      }));
+
+      return posts;
+    },
+
   },
 
   Subscription: {
